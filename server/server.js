@@ -1,8 +1,12 @@
+//const { GoogleGenerativeAI } = require('@google/generative-ai');
+//const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 require('dotenv').config();
+
+const { generateGeminiSuggestions } = require('./geminiService');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,26 +26,46 @@ let canvasState = null;
 // --- AI Suggestions API ---
 app.post('/api/ai-suggestions', async (req, res) => {
   try {
-    const { text } = req.body;
+    const { selectedText } = req.body; // Expect 'selectedText' from the canvas frontend
 
-    if (!text || text.trim() === '') {
-      return res.json({ suggestions: [] });
+    // Validate input
+    if (!selectedText || selectedText.trim() === '') {
+      return res.json({ suggestions: [] }); // Return empty array if no text is provided
     }
 
-    // Demo suggestions
-    const suggestions = [
-      `${text} - improved`,
-      `Better: ${text}`,
-      `✨ ${text} ✨`,
-      `${text.toUpperCase()}`
-    ];
+    // Call the modularized Gemini suggestion function
+    const geminiSuggestions = await generateGeminiSuggestions(selectedText);
+    res.json({ suggestions: geminiSuggestions }); // Send suggestions back to the client
 
-    res.json({ suggestions });
   } catch (error) {
-    console.error(error);
+    console.error('Error in /api/ai-suggestions endpoint:', error);
     res.status(500).json({ error: 'Failed to generate suggestions' });
   }
 });
+
+
+// app.post('/api/ai-suggestions', async (req, res) => {
+//   try {
+//     const { text } = req.body;
+
+//     if (!text || text.trim() === '') {
+//       return res.json({ suggestions: [] });
+//     }
+
+//     // Demo suggestions
+//     const suggestions = [
+//       `${text} - improved`,
+//       `Better: ${text}`,
+//       `✨ ${text} ✨`,
+//       `${text.toUpperCase()}`
+//     ];
+
+//     res.json({ suggestions });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: 'Failed to generate suggestions' });
+//   }
+// });
 
 // --- Socket.IO logic ---
 io.on('connection', (socket) => {
@@ -70,4 +94,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Canvas app frontend is expected to be at http://localhost:3002`);
 });
