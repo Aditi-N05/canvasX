@@ -12,21 +12,32 @@ function App() {
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // --- NEW: Flag and queue for remote updates
+  const isApplyingRemoteUpdate = useRef(false);
+  const loadQueue = useRef(Promise.resolve());
+
   useEffect(() => {
-    // Initialize Fabric.js canvas
     const fabricCanvas = new fabric.Canvas(canvasRef.current, {
       width: 800,
       height: 600,
       backgroundColor: 'white',
     });
 
-    // Set up socket connection
     const socketConnection = io('http://localhost:3001');
-
     setCanvas(fabricCanvas);
     setSocket(socketConnection);
 
-    // Canvas event listeners
+    // Only broadcast if not applying remote update
+    const broadcastUpdate = () => {
+      if (isApplyingRemoteUpdate.current) return;
+      const json = fabricCanvas.toJSON(['id']);
+      socketConnection.emit('canvas-update', json);
+    };
+
+    fabricCanvas.on('object:added', broadcastUpdate);
+    fabricCanvas.on('object:modified', broadcastUpdate);
+    fabricCanvas.on('text:changed', broadcastUpdate);
+
     fabricCanvas.on('selection:created', handleTextSelection);
     fabricCanvas.on('selection:updated', handleTextSelection);
     fabricCanvas.on('selection:cleared', () => {
@@ -34,27 +45,44 @@ function App() {
       setAiSuggestions([]);
     });
 
-    // Socket event listeners
-    socketConnection.on('canvas-update', (data) => {
-      fabricCanvas.loadFromJSON(data, fabricCanvas.renderAll.bind(fabricCanvas));
+    // --- FIX: Queue and suppress event loop for remote updates
+    socketConnection.on('canvas-update', (json) => {
+      loadQueue.current = loadQueue.current.then(() => {
+        return new Promise((resolve) => {
+          isApplyingRemoteUpdate.current = true;
+          fabricCanvas.loadFromJSON(json, () => {
+            fabricCanvas.renderAll();
+            isApplyingRemoteUpdate.current = false;
+            resolve();
+          });
+        });
+      });
+    });
+
+    socketConnection.on('canvas-clear', () => {
+      isApplyingRemoteUpdate.current = true;
+      fabricCanvas.clear();
+      fabricCanvas.setBackgroundColor('white', fabricCanvas.renderAll.bind(fabricCanvas));
+      isApplyingRemoteUpdate.current = false;
     });
 
     return () => {
       fabricCanvas.dispose();
       socketConnection.disconnect();
     };
+    // eslint-disable-next-line
   }, []);
 
   const handleTextSelection = (e) => {
-    if (e.selected && e.selected[0] && e.selected[0].type === 'textbox') {
-      setSelectedText(e.selected[0]);
-      generateAISuggestions(e.selected[0].text);
+    const obj = e.selected && e.selected[0];
+    if (obj && obj.type === 'textbox') {
+      setSelectedText(obj);
+      generateAISuggestions(obj.text);
     }
   };
 
   const addTextBox = () => {
     if (!canvas) return;
-
     const textbox = new fabric.Textbox('Click to edit', {
       left: 100,
       top: 100,
@@ -68,59 +96,53 @@ function App() {
       cornerSize: 8,
       transparentCorners: false,
     });
-
     canvas.add(textbox);
     canvas.setActiveObject(textbox);
     textbox.enterEditing();
+    // No need to broadcast, handled by 'object:added'
+  };
 
-    // Emit to other users
-    emitCanvasUpdate();
+  const clearCanvas = () => {
+    if (canvas && socket) {
+      canvas.clear();
+      canvas.setBackgroundColor('white', canvas.renderAll.bind(canvas));
+      socket.emit('canvas-clear');
+    }
   };
 
   const generateAISuggestions = async (text) => {
     if (!text || text.trim() === '' || text === 'Click to edit') return;
-
     setLoading(true);
     try {
       const response = await axios.post('http://localhost:3001/api/ai-suggestions', {
-        text: text
+        text: text,
       });
       setAiSuggestions(response.data.suggestions || []);
     } catch (error) {
-      console.error('Error generating AI suggestions:', error);
-      setAiSuggestions(['Error generating suggestions. Please try again.']);
+      console.error(error);
+      setAiSuggestions(['Error generating suggestions.']);
     }
     setLoading(false);
   };
 
   const applySuggestion = (suggestion) => {
-    if (!selectedText) return;
+  if (!selectedText) return;
+  selectedText.set('text', suggestion);
+  canvas.renderAll();
+  setAiSuggestions([]);
+  // Manually trigger broadcast to sync with other clients
+  if (canvas && socket) {
+    const json = canvas.toJSON(['id']);
+    socket.emit('canvas-update', json);
+  }
+};
+    // Will be broadcast by 'object:modified'
 
-    selectedText.set('text', suggestion);
-    canvas.renderAll();
-    emitCanvasUpdate();
-    setAiSuggestions([]);
-  };
-
-  const emitCanvasUpdate = () => {
-    if (socket && canvas) {
-      const canvasData = canvas.toJSON();
-      socket.emit('canvas-update', canvasData);
-    }
-  };
-
-  const clearCanvas = () => {
-    if (canvas) {
-      canvas.clear();
-      canvas.backgroundColor = 'white';
-      emitCanvasUpdate();
-    }
-  };
 
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Collaborative AI Canvas</h1>
+        <h1>CanvasX: Collaborative AI Canvas</h1>
         <div className="toolbar">
           <button onClick={addTextBox} className="btn btn-primary">
             Add Text Box
@@ -140,29 +162,21 @@ function App() {
           <h3>AI Suggestions</h3>
           {selectedText ? (
             <div>
-              <p className="selected-text">
-                Selected: "{selectedText.text}"
-              </p>
+              <p className="selected-text">Selected: "{selectedText.text}"</p>
               {loading ? (
                 <div className="loading">Generating suggestions...</div>
               ) : (
                 <div className="suggestions">
                   {aiSuggestions.length > 0 ? (
-                    aiSuggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        className="suggestion-btn"
-                        onClick={() => applySuggestion(suggestion)}
-                      >
-                        {suggestion}
+                    aiSuggestions.map((s, i) => (
+                      <button key={i} className="suggestion-btn" onClick={() => applySuggestion(s)}>
+                        {s}
                       </button>
                     ))
                   ) : (
-                    <p className="no-suggestions">
-                      {selectedText.text === 'Click to edit' 
+                    <p className="no-suggestions">{selectedText.text === 'Click to edit' 
                         ? 'Edit the text to get AI suggestions' 
-                        : 'No suggestions available'}
-                    </p>
+                        : 'No suggestions available'}</p>
                   )}
                 </div>
               )}
