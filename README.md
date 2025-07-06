@@ -82,6 +82,7 @@ A real-time collaborative canvas application with AI-powered text suggestions. U
 4. **Apply Suggestions**: Click on any suggestion to replace the selected text
 5. **Move Elements**: Drag text boxes around the canvas
 6. **Resize Elements**: Use the corner handles to resize text boxes
+7. **Style Elements**: Apply basic formatting like modifying text size, colour, alignment and so on
 
 ### Collaboration
 - Open the same URL in multiple browser windows or share with others
@@ -95,20 +96,17 @@ Create a `.env` file in the root directory:
 
 ```env
 PORT=3001
-# OPENAI_API_KEY=your_openai_api_key_here  # Optional for real AI
+# GEMINI_API_KEY=your_gemini_api_key_here  
 FRONTEND_URL=http://localhost:3000
 ```
 
 ### AI Integration
-The application includes two AI suggestion modes:
+The application includes an AI suggestion mode:
+**Gemini Integration**
+To enable Gemini API:
+1. Get an API key from [Google AI Studio](https://aistudio.google.com/apikey)
+2. Add it to your `.env` file: `GEMINI_API_KEY=your_key_here`
 
-1. **Mock AI (Default)**: Uses rule-based suggestions for demonstration
-2. **OpenAI Integration**: Uncomment the OpenAI section in `server/server.js` and add your API key
-
-To enable OpenAI:
-1. Get an API key from [OpenAI](https://platform.openai.com/api-keys)
-2. Add it to your `.env` file: `OPENAI_API_KEY=your_key_here`
-3. Uncomment the OpenAI code in `server/server.js`
 
 ## API Endpoints
 
