@@ -82,6 +82,7 @@ A real-time collaborative canvas application with AI-powered text suggestions. U
 4. **Apply Suggestions**: Click on any suggestion to replace the selected text
 5. **Move Elements**: Drag text boxes around the canvas
 6. **Resize Elements**: Use the corner handles to resize text boxes
+7. **Style Elements**: Apply basic formatting like modifying text size, colour, alignment and so on
 
 ### Collaboration
 - Open the same URL in multiple browser windows or share with others
@@ -95,20 +96,17 @@ Create a `.env` file in the root directory:
 
 ```env
 PORT=3001
-# OPENAI_API_KEY=your_openai_api_key_here  # Optional for real AI
+# GEMINI_API_KEY=your_gemini_api_key_here  
 FRONTEND_URL=http://localhost:3000
 ```
 
 ### AI Integration
-The application includes two AI suggestion modes:
+The application includes an AI suggestion mode:
+**Gemini Integration**
+To enable Gemini API:
+1. Get an API key from [Google AI Studio](https://aistudio.google.com/apikey)
+2. Add it to your `.env` file: `GEMINI_API_KEY=your_key_here`
 
-1. **Mock AI (Default)**: Uses rule-based suggestions for demonstration
-2. **OpenAI Integration**: Uncomment the OpenAI section in `server/server.js` and add your API key
-
-To enable OpenAI:
-1. Get an API key from [OpenAI](https://platform.openai.com/api-keys)
-2. Add it to your `.env` file: `OPENAI_API_KEY=your_key_here`
-3. Uncomment the OpenAI code in `server/server.js`
 
 ## API Endpoints
 
@@ -160,6 +158,10 @@ Express Server
 ├── Canvas State Management
 └── AI Integration Layer
 ```
+
+### Snapshots 
+![first](https://github.com/user-attachments/assets/9a7171e8-20c0-44d8-b256-9a6f91d2d356)
+![second](https://github.com/user-attachments/assets/d28f1f93-e872-4a49-882f-1c8251933d98)
 
 ## Customization
 
@@ -215,11 +217,11 @@ MIT License - feel free to use this project for learning or commercial purposes.
 
 ## Future Enhancements
 
-- [ ] User authentication and sessions
-- [ ] Canvas templates and presets
-- [ ] Image upload and manipulation
+- [ ] Integration with Figma or Notion APIs for real-time design asset or content block suggestions directly within existing       workflows.
+- [ ] Expand AI generation capabilities to include not just text but image variations, tone shifts, and CTA experimentation        using multimodal models.
+- [ ] Add voice interface support for marketers to speak ideas while the AI listens, suggests, and drafts in real-time.
 - [ ] Advanced text formatting options
 - [ ] Export to various formats (PDF, PNG, etc.)
-- [ ] Voice-to-text integration
+- [ ] Introduce user roles and access controls to support collaboration between copywriters, designers, and strategists.
 - [ ] Mobile responsiveness improvements
 - [ ] Collaborative cursors and user presence indicators
