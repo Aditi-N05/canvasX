@@ -12,14 +12,13 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:3000","http://localhost:3002"],
+    origin: ["http://localhost:3000","http://localhost:3002", "https://canvas-x-rose.vercel.app/"],
     methods: ["GET", "POST"]
   }
 });
 
 app.use(cors());
 app.use(express.json());
-
 // Store last full canvas state
 let canvasState = null;
 
@@ -43,29 +42,11 @@ app.post('/api/ai-suggestions', async (req, res) => {
   }
 });
 
+//Pinging health route to keep server alive
+app.get('/health', (req, res) => {
+  res.send('OK');
+});
 
-// app.post('/api/ai-suggestions', async (req, res) => {
-//   try {
-//     const { text } = req.body;
-
-//     if (!text || text.trim() === '') {
-//       return res.json({ suggestions: [] });
-//     }
-
-//     // Demo suggestions
-//     const suggestions = [
-//       `${text} - improved`,
-//       `Better: ${text}`,
-//       `✨ ${text} ✨`,
-//       `${text.toUpperCase()}`
-//     ];
-
-//     res.json({ suggestions });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: 'Failed to generate suggestions' });
-//   }
-// });
 
 // --- Socket.IO logic ---
 io.on('connection', (socket) => {
