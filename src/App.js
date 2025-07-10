@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { fabric } from 'fabric';
 import io from 'socket.io-client';
 import axios from 'axios';
-import './App.css'; // Assuming you have an App.css for basic styling
+import './App.css'; 
 
 function App() {
   const canvasRef = useRef(null);
@@ -11,6 +11,8 @@ function App() {
   const [selectedText, setSelectedText] = useState(null);
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
   // --- NEW: Flag and queue for remote updates
   const isApplyingRemoteUpdate = useRef(false);
@@ -34,7 +36,7 @@ function App() {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/api/ai-suggestions', {
+      const response = await axios.post(`${backendUrl}/api/ai-suggestions`, {
         selectedText: text
       });
       setAiSuggestions(response.data.suggestions || []);
@@ -89,7 +91,7 @@ function App() {
       selection: true, // Enable selection
     });
 
-    const socketConnection = io('http://localhost:3001');
+    const socketConnection = io(backendUrl);
     setCanvas(fabricCanvas);
     setSocket(socketConnection);
 
